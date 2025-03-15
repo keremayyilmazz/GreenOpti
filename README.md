@@ -1,12 +1,3 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
-
 # GreenOpti - Akıllı Ulaşım Optimizasyonu
 
 ## Proje Hakkında
@@ -15,7 +6,7 @@ Bu proje, farklı ulaşım modları (kara, hava, deniz ve tren) arasında en opt
 ## 🚧 Geliştirme Aşaması
 Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler yakında eklenecektir:
 
-### Planlan Özellikler
+### Planlanan Özellikler
 - [ ] Çoklu Ulaşım Modu Analizi
   - Kara yolu optimizasyonu
   - Hava yolu optimizasyonu
@@ -40,14 +31,14 @@ Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler yak�
 - Detaylı karbon ayak izi analizi
 - İnteraktif harita entegrasyonu
 
-## Teknik Altyapı
-- Laravel 10.x
-- PHP 8.1+
-- MySQL
-- JavaScript
-- Harita API'leri
-- AI Modelleri (Geliştirme aşamasında)
+## Kurulum
 
+### Gereksinimler
+- PHP >= 8.1
+- Composer
+- Node.js & NPM
+- MySQL veya PostgreSQL
+- Git
 
 ### Adım Adım Kurulum
 
@@ -83,7 +74,7 @@ php artisan key:generate
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=fabrika_db
+DB_DATABASE=greenopti_db
 DB_USERNAME=root
 DB_PASSWORD=
 ```
@@ -116,10 +107,7 @@ Email: admin@example.com
 Şifre: password
 ```
 
-
 ## Proje Yapısı
-
-
 
 ```
 project/
@@ -139,76 +127,64 @@ project/
 ├── routes/           # Rota tanımlamaları
 └── tests/           # Test dosyaları
 ```
-## Özellikler ve Ekran Görüntüleri
-
-### Admin Paneli
-- Kullanıcı Yönetimi
-  - Kullanıcı ekleme/düzenleme/silme
-  - Rol ve yetki yönetimi
-  - Kullanıcı aktivitelerini izleme
-
-- Stok Takibi
-  - Ürün stok durumu
-  - Stok giriş/çıkış işlemleri
-  - Kritik stok bildirimleri
-
-- Sipariş Yönetimi
-  - Yeni sipariş oluşturma
-  - Sipariş durumu güncelleme
-  - Sipariş geçmişi
-
-### Kullanıcı Paneli
-- Sipariş İşlemleri
-  - Yeni sipariş oluşturma
-  - Sipariş takibi
-  - Sipariş geçmişi görüntüleme
-
-- Stok Görüntüleme
-  - Mevcut stok durumu
-  - Ürün detayları
-  - Fiyat bilgileri
-
-- Raporlar
-  - Günlük/haftalık/aylık raporlar
-  - Sipariş istatistikleri
-  - Stok hareket raporları
 
 ## API Dokümantasyonu
 
 ### Kullanılabilir Endpoint'ler
 
-\`\`\`
-# Ürün İşlemleri
-GET /api/products           - Tüm ürünleri listele
-GET /api/products/{id}      - Ürün detayı
-POST /api/products          - Yeni ürün ekle
-PUT /api/products/{id}      - Ürün güncelle
-DELETE /api/products/{id}   - Ürün sil
+#### Rota Optimizasyonu
+```bash
+# Rota Hesaplama
+GET /api/routes/calculate          - Optimum rota hesaplama
+POST /api/routes/compare          - Farklı rotaları karşılaştırma
 
-# Sipariş İşlemleri
-GET /api/orders            - Tüm siparişleri listele
-POST /api/orders           - Yeni sipariş oluştur
-PUT /api/orders/{id}       - Sipariş durumu güncelle
+# Emisyon Analizi
+GET /api/emission/calculate       - Karbon emisyonu hesaplama
+GET /api/emission/compare         - Farklı rotaların emisyon karşılaştırması
+```
 
-# Raporlama
-GET /api/reports/daily     - Günlük rapor
-GET /api/reports/monthly   - Aylık rapor
-GET /api/reports/stock     - Stok raporu
-\`\`\`
+#### Ulaşım Modları
+```bash
+# Kara Yolu
+GET /api/transport/road           - Kara yolu rotaları
+GET /api/transport/road/{id}      - Spesifik kara yolu detayı
 
-## Teknik Detaylar
+# Hava Yolu
+GET /api/transport/air            - Hava yolu rotaları
+GET /api/transport/air/{id}       - Spesifik hava yolu detayı
 
-### Kullanılan Teknolojiler
+# Deniz Yolu
+GET /api/transport/sea            - Deniz yolu rotaları
+GET /api/transport/sea/{id}       - Spesifik deniz yolu detayı
+
+# Tren Yolu
+GET /api/transport/rail           - Tren rotaları
+GET /api/transport/rail/{id}      - Spesifik tren yolu detayı
+```
+
+#### Optimizasyon Raporları
+```bash
+# Zaman Bazlı Raporlar
+GET /api/reports/daily            - Günlük optimizasyon raporu
+GET /api/reports/monthly          - Aylık optimizasyon raporu
+GET /api/reports/yearly           - Yıllık optimizasyon raporu
+
+# Analiz Raporları
+GET /api/analysis/emission        - Emisyon analiz raporu
+GET /api/analysis/cost            - Maliyet analiz raporu
+GET /api/analysis/time            - Zaman optimizasyon raporu
+```
+
+### Not
+API endpoint'leri geliştirme aşamasındadır ve değişiklik gösterebilir. Güncel dokümantasyon için lütfen düzenli olarak kontrol ediniz.
+
+## Teknik Altyapı
 - Laravel 10.x
 - PHP 8.1+
-- MySQL 8.0
-- Tailwind CSS
-- Alpine.js
-- Laravel Livewire
+- MySQL
+- JavaScript
+- Harita API'leri (Yakında eklenecek)
+- AI Modelleri (Geliştirme aşamasında)
 
-### Güvenlik Özellikleri
-- Laravel Sanctum ile API Authentication
-- CSRF koruması
-- XSS koruması
-- SQL Injection koruması
-- Rate Limiting
+## Lisans
+Bu proje [MIT lisansı](https://opensource.org/licenses/MIT) ile lisanslanmıştır.
