@@ -185,6 +185,3 @@ API endpoint'leri geliştirme aşamasındadır ve değişiklik gösterebilir. G�
 - JavaScript
 - Harita API'leri (Yakında eklenecek)
 - AI Modelleri (Geliştirme aşamasında)
-
-## Lisans
-Bu proje [MIT lisansı](https://opensource.org/licenses/MIT) ile lisanslanmıştır.
