@@ -101,20 +101,20 @@ Email: admin@example.com
 
 project/
 ├── app/
-│ ├── Http/
-│ │ └── Controllers/ # Controller sınıfları
-│ └── Models/ # Veritabanı modelleri
-├── config/ # Yapılandırma dosyaları
+│   ├── Http/
+│   │   └── Controllers/    # Controller sınıfları
+│   └── Models/            # Veritabanı modelleri
+├── config/               # Yapılandırma dosyaları
 ├── database/
-│ ├── migrations/ # Veritabanı migration'ları
-│ └── seeders/ # Veritabanı seed'leri
-├── public/ # Genel erişime açık dosyalar
+│   ├── migrations/      # Veritabanı migration'ları
+│   └── seeders/        # Veritabanı seed'leri
+├── public/             # Genel erişime açık dosyalar
 ├── resources/
-│ ├── css/ # Stil dosyaları
-│ ├── js/ # JavaScript dosyaları
-│ └── views/ # Blade template'leri
-├── routes/ # Rota tanımlamaları
-└── tests/ # Test dosyaları
+│   ├── css/           # Stil dosyaları
+│   ├── js/           # JavaScript dosyaları
+│   └── views/        # Blade template'leri
+├── routes/           # Rota tanımlamaları
+└── tests/           # Test dosyaları
 
 ## Özellikler ve Ekran Görüntüleri
 
