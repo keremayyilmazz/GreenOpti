@@ -7,27 +7,47 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
-# Fabrika Yönetim Sistemi
+# GreenOpti - Akıllı Ulaşım Optimizasyonu
 
 ## Proje Hakkında
-Bu proje, fabrikaların üretim süreçlerini, stok yönetimini ve iş akışlarını yönetmek için geliştirilmiş bir web uygulamasıdır. Laravel framework'ü kullanılarak geliştirilmiştir.
+Bu proje, farklı ulaşım modları (kara, hava, deniz ve tren) arasında en optimum rotayı belirleyerek karbon emisyonunu azaltmayı, zaman ve maliyet optimizasyonunu sağlamayı amaçlayan bir web uygulamasıdır.
 
-## Özellikler
-- Üretim takibi ve planlama
-- Stok yönetimi ve takibi
-- Sipariş yönetimi
-- Detaylı raporlama sistemi
-- Kullanıcı yetkilendirme sistemi
-- Gerçek zamanlı bildirimler
+## 🚧 Geliştirme Aşaması
+Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler yakında eklenecektir:
 
-## Kurulum
+### Planlan Özellikler
+- [ ] Çoklu Ulaşım Modu Analizi
+  - Kara yolu optimizasyonu
+  - Hava yolu optimizasyonu
+  - Deniz yolu optimizasyonu
+  - Tren yolu optimizasyonu
 
-### Gereksinimler
-- PHP >= 8.1
-- Composer
-- Node.js & NPM
-- MySQL veya PostgreSQL
-- Git
+- [ ] Optimizasyon Kriterleri
+  - Karbon emisyonu hesaplama
+  - Zaman optimizasyonu
+  - Maliyet analizi
+  - Kombine rota önerileri
+
+- [ ] Raporlama Sistemi
+  - Emisyon raporları
+  - Maliyet karşılaştırma
+  - Zaman analizi
+  - Optimizasyon önerileri
+
+### Yakında Eklenecek
+- Gerçek zamanlı rota takibi
+- Yapay zeka destekli rota optimizasyonu
+- Detaylı karbon ayak izi analizi
+- İnteraktif harita entegrasyonu
+
+## Teknik Altyapı
+- Laravel 10.x
+- PHP 8.1+
+- MySQL
+- JavaScript
+- Harita API'leri
+- AI Modelleri (Geliştirme aşamasında)
+
 
 ### Adım Adım Kurulum
 
