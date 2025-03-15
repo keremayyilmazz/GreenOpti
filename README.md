@@ -99,6 +99,9 @@ Email: admin@example.com
 
 ## Proje Yapısı
 
+
+
+```
 project/
 ├── app/
 │   ├── Http/
@@ -115,7 +118,7 @@ project/
 │   └── views/        # Blade template'leri
 ├── routes/           # Rota tanımlamaları
 └── tests/           # Test dosyaları
-
+```
 ## Özellikler ve Ekran Görüntüleri
 
 ### Admin Paneli
