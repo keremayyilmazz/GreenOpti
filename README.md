@@ -33,8 +33,8 @@ Bu proje, fabrikaların üretim süreçlerini, stok yönetimini ve iş akışlar
 
 1. **Repository'yi klonlayın:**
 ```bash
-git clone https://github.com/keremayyilmazz/Projeler.git
-cd Projeler
+git clone https://github.com/keremayyilmazz/GreenOpti.git
+cd GreenOpti
 ```
 
 2. **Composer bağımlılıklarını yükleyin:**
