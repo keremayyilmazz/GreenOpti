@@ -20,15 +20,81 @@ Bu proje, fabrikaların üretim süreçlerini, stok yönetimini ve iş akışlar
 - Kullanıcı yetkilendirme sistemi
 - Gerçek zamanlı bildirimler
 
-## Sistem Gereksinimleri
-- PHP >= 8.1
-- MySQL veya PostgreSQL
-- Composer
-- Node.js ve NPM
-
 ## Kurulum
-1. Repository'yi clone'layın:
 
+### Gereksinimler
+- PHP >= 8.1
+- Composer
+- Node.js & NPM
+- MySQL veya PostgreSQL
+- Git
+
+### Adım Adım Kurulum
+
+1. **Repository'yi klonlayın:**
+```bash
+git clone https://github.com/keremayyilmazz/Projeler.git
+cd Projeler
+```
+
+2. **Composer bağımlılıklarını yükleyin:**
+```bash
+composer install
+```
+
+3. **NPM bağımlılıklarını yükleyin:**
+```bash
+npm install
+```
+
+4. **Ortam değişkenlerini ayarlayın:**
+```bash
+# .env.example dosyasını kopyalayın
+cp .env.example .env
+
+# Uygulama anahtarını oluşturun
+php artisan key:generate
+```
+
+5. **Veritabanını ayarlayın:**
+- MySQL'de yeni bir veritabanı oluşturun
+- .env dosyasında veritabanı bilgilerinizi düzenleyin:
+```bash
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=fabrika_db
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+6. **Veritabanı tablolarını oluşturun:**
+```bash
+# Tabloları oluşturun
+php artisan migrate
+
+# (Opsiyonel) Örnek verileri yükleyin
+php artisan db:seed
+```
+
+7. **Uygulamayı çalıştırın:**
+```bash
+# Laravel sunucusunu başlatın
+php artisan serve
+
+# Yeni bir terminal açın ve asset'leri derleyin
+npm run dev
+```
+
+8. **Tarayıcıda açın:**
+- [http://localhost:8000](http://localhost:8000)
+
+### Varsayılan Giriş Bilgileri
+```
+Admin Kullanıcısı:
+Email: admin@example.com
+Şifre: password
+```
 
 
 ## Proje Yapısı
