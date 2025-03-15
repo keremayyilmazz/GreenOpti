@@ -1,3 +1,4 @@
+# Laravel
 /.phpunit.cache
 /node_modules
 /public/build
@@ -21,3 +22,24 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Ek olarak eklenecekler
+composer.phar
+error_log.php
+.DS_Store
+*.log
+*.cache
+*.swp
+*.swo
+.env.*.local
+/storage/debugbar
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/app/public/*
+.php_cs.cache
+.php-cs-fixer.cache
+_ide_helper.php
+_ide_helper_models.php
+.phpstorm.meta.php
