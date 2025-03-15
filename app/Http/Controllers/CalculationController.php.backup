@@ -1,0 +1,98 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class CalculationController extends Controller
+{
+    public function index()
+    {
+        // Tüm fabrikaları al
+        $factories = DB::table('factories')
+            ->orderBy('location', 'asc')
+            ->get();
+
+        return view('calculation-form', compact('factories'));
+    }
+
+    public function calculate(Request $request)
+    {
+        try {
+            // Gelen verileri logla
+            Log::info('Calculation request:', $request->all());
+
+            // Fabrika bilgilerini al
+            $fromFactory = DB::table('factories')->find($request->from_factory);
+            $toFactory = DB::table('factories')->find($request->to_factory);
+
+            if (!$fromFactory || !$toFactory) {
+                return back()->with('error', 'Fabrika bilgisi bulunamadı.');
+            }
+
+            // Mesafeyi bul
+            $distance = DB::table('distances')
+                ->where('from_factory_id', $request->from_factory)
+                ->where('to_factory_id', $request->to_factory)
+                ->first();
+
+            Log::info('Distance query result:', ['distance' => $distance]);
+
+            if (!$distance) {
+                return back()->with('error', 'Mesafe bilgisi bulunamadı.');
+            }
+
+            // Taşıma tipi bilgilerini al
+            $transportation = DB::table('transportations')
+                ->where('type', $request->transportation_type)
+                ->first();
+
+            if (!$transportation) {
+                return back()->with('error', 'Taşıma tipi bilgisi bulunamadı.');
+            }
+
+            // Taşıma tipinin uygunluğunu kontrol et
+            $isAvailable = DB::table('available_transportations')
+                ->where('from_factory_id', $request->from_factory)
+                ->where('to_factory_id', $request->to_factory)
+                ->where('transportation_type', $request->transportation_type)
+                ->where('is_available', true)
+                ->exists();
+
+            if (!$isAvailable) {
+                return back()->with('error', 'Seçilen taşıma tipi bu güzergah için uygun değil.');
+            }
+
+            // Maliyeti hesapla
+            $totalCost = $transportation->base_cost +
+                        ($distance->distance * $transportation->cost_per_km) +
+                        ($request->tonnage * $transportation->cost_per_ton);
+
+            Log::info('Calculation result:', [
+                'distance' => $distance->distance,
+                'base_cost' => $transportation->base_cost,
+                'cost_per_km' => $transportation->cost_per_km,
+                'cost_per_ton' => $transportation->cost_per_ton,
+                'tonnage' => $request->tonnage,
+                'total_cost' => $totalCost
+            ]);
+
+            return back()->with('result', [
+                'title' => "{$fromFactory->location} - {$toFactory->location} Nakliye Hesaplaması",
+                'distance' => $distance->distance,
+                'type' => $request->transportation_type,
+                'tonnage' => $request->tonnage,
+                'cost' => $totalCost
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Calculation error:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Hesaplama sırasında bir hata oluştu.');
+        }
+    }
+}
