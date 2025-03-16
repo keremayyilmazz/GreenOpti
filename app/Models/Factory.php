@@ -9,20 +9,5 @@ class Factory extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'name',
-        'latitude',
-        'longitude',
-        'user_id'  // Bu satırı ekleyin
-    ];
-
-    protected $casts = [
-        'latitude' => 'float',
-        'longitude' => 'float'
-    ];
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+    protected $fillable = ['name', 'latitude', 'longitude'];
 }

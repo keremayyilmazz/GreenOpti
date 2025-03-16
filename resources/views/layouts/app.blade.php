@@ -13,9 +13,6 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-        <!-- Styles -->
-        @livewireStyles
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100">
@@ -32,101 +29,10 @@
 
             <!-- Page Content -->
             <main>
-                {{ $slot }}
+                {{ $slot ?? '' }}
             </main>
         </div>
 
-        <!-- Scripts -->
-        @livewireScripts
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-        
-        <!-- Custom Scripts -->
-        <script>
-            // Global AJAX Setup for CSRF
-            $.ajaxSetup({
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                }
-            });
-
-            // Global Error Handler
-            $(document).ajaxError(function(event, jqXHR, settings, thrownError) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Hata!',
-                    text: 'Bir hata oluştu. Lütfen tekrar deneyin.',
-                });
-            });
-
-            // Initialize Select2
-            $(document).ready(function() {
-                $('.select2').select2({
-                    theme: 'classic',
-                    placeholder: 'Seçiniz...',
-                    allowClear: true
-                });
-            });
-
-            // Global Success Message
-            function showSuccess(message) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Başarılı!',
-                    text: message,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            }
-
-            // Global Error Message
-            function showError(message) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Hata!',
-                    text: message
-                });
-            }
-
-            // Global Confirmation Dialog
-            function confirmAction(title, text, callback) {
-                Swal.fire({
-                    title: title,
-                    text: text,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Evet',
-                    cancelButtonText: 'Hayır'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        callback();
-                    }
-                });
-            }
-
-            // Format Number
-            function formatNumber(number) {
-                return new Intl.NumberFormat('tr-TR').format(number);
-            }
-
-            // Format Date
-            function formatDate(date) {
-                return new Date(date).toLocaleString('tr-TR');
-            }
-
-            // Format Currency
-            function formatCurrency(amount) {
-                return new Intl.NumberFormat('tr-TR', {
-                    style: 'currency',
-                    currency: 'TRY'
-                }).format(amount);
-            }
-        </script>
-
-        <!-- Stack Scripts -->
         @stack('scripts')
     </body>
 </html>

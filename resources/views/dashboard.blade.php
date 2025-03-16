@@ -1,234 +1,274 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Fabrikalar') }}
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('GreenOpti') }}
         </h2>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <!-- Fabrika Ekleme ve Hesaplama Butonları -->
-                    <div class="mb-4 flex space-x-4">
-                        <button id="addFactoryBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Fabrika Ekle
-                        </button>
-                        
-                        <a href="{{ route('calculations') }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                            Hesaplama Yap
-                        </a>
+            <!-- Harita Bölümü -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold mb-4">Fabrika Konumları</h3>
+                    <div id="map" class="w-full" style="height: 500px; z-index: 1;"></div>
+                </div>
+            </div>
+
+            <!-- Rota Hesaplama Bölümü -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold mb-4">Rota Hesaplama</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Başlangıç Fabrikası
+                            </label>
+                            <select id="source_factory_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Fabrika Seçin</option>
+                                @foreach($factories as $factory)
+                                    <option value="{{ $factory->id }}">{{ $factory->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Hedef Fabrika
+                            </label>
+                            <select id="destination_factory_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Fabrika Seçin</option>
+                                @foreach($factories as $factory)
+                                    <option value="{{ $factory->id }}">{{ $factory->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Araç Tipi
+                            </label>
+                            <select id="vehicle_type" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="truck">Kamyon</option>
+                                <option value="van">Kamyonet</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <!-- Harita -->
-                    <div id="map" style="height: 500px;" class="mb-4 rounded-lg shadow-lg"></div>
+                    <div class="mt-4">
+                        <button type="button" id="calculateRoute" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                            Hesapla
+                        </button>
+                    </div>
 
-                    <!-- Fabrika Listesi -->
-                    <div class="mt-6">
-                        <h3 class="text-lg font-bold mb-4">Fabrika Listesi</h3>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full bg-white dark:bg-gray-700">
-                                <thead>
-                                    <tr>
-                                        <th class="px-6 py-3 border-b dark:border-gray-600 text-left">Fabrika Adı</th>
-                                        <th class="px-6 py-3 border-b dark:border-gray-600 text-left">Konum</th>
-                                        <th class="px-6 py-3 border-b dark:border-gray-600 text-left">İşlemler</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="factoryList">
-                                    <!-- Fabrikalar JavaScript ile buraya eklenecek -->
-                                </tbody>
-                            </table>
-                        </div>
+                    <!-- Sonuçlar -->
+                    <div id="results" class="mt-4 hidden">
+                        <h4 class="font-semibold mb-2">Sonuçlar:</h4>
+                        <div id="resultsContent"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Fabrika Ekleme Modal -->
-    <div id="factoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
-            <div class="mt-3">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 text-center">Fabrika Ekle</h3>
-                <form id="factoryForm" class="space-y-4">
-                    <div>
-                        <label for="factoryName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fabrika Adı</label>
-                        <input type="text" 
-                               id="factoryName" 
-                               name="factoryName" 
-                               class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500" 
-                               placeholder="Fabrika adını girin"
-                               required>
-                    </div>
-                    <input type="hidden" id="lat">
-                    <input type="hidden" id="lng">
-                    <div class="flex justify-end space-x-3 mt-4">
-                        <button type="button" 
-                                id="closeModal" 
-                                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 dark:bg-gray-600 dark:text-gray-200">
-                            İptal
-                        </button>
-                        <button type="submit" 
-                                id="saveFactory" 
-                                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+    @push('scripts')
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script>
+        // Sayfa yüklendiğinde haritayı başlat
+        document.addEventListener('DOMContentLoaded', function() {
+            // Harita başlatma
+            var map = L.map('map').setView([39.9334, 32.8597], 6);
+
+            // OpenStreetMap tile layer ekle
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Mevcut fabrikaları haritaya ekle
+            @foreach($factories as $factory)
+                L.marker([{{ $factory->latitude }}, {{ $factory->longitude }}])
+                    .bindPopup(`
+                        <div class="p-3">
+                            <h3 class="font-semibold mb-2">{{ $factory->name }}</h3>
+                            <button onclick="deleteFactory({{ $factory->id }}, '{{ $factory->name }}')" 
+                                class="w-full px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
+                                Fabrikayı Sil
+                            </button>
+                        </div>
+                    `)
+                    .addTo(map);
+            @endforeach
+
+            // Fabrika silme fonksiyonu
+            window.deleteFactory = async function(id, name) {
+                if (confirm(`"${name}" fabrikasını silmek istediğinizden emin misiniz?`)) {
+                    try {
+                        const response = await fetch(`/factories/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            // Başarılı silme işlemi
+                            alert('Fabrika başarıyla silindi');
+                            window.location.reload(); // Sayfayı yenile
+                        } else {
+                            // Hata durumu
+                            alert('Hata: ' + (data.message || 'Fabrika silinirken bir hata oluştu'));
+                        }
+                    } catch (error) {
+                        console.error('Silme hatası:', error);
+                        alert('Fabrika silinirken bir hata oluştu!');
+                    }
+                }
+            }
+
+            // Haritaya tıklama olayını dinle
+            map.on('click', function(e) {
+                var lat = e.latlng.lat.toFixed(6);
+                var lng = e.latlng.lng.toFixed(6);
+
+                // Popup içeriği
+                var content = `
+                    <form id="addFactoryForm" class="p-3">
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Fabrika Adı:</label>
+                            <input type="text" name="name" class="w-full px-2 py-1 border rounded" required>
+                        </div>
+                        <input type="hidden" name="latitude" value="${lat}">
+                        <input type="hidden" name="longitude" value="${lng}">
+                        <button type="submit" class="w-full px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
                             Kaydet
                         </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+                    </form>
+                `;
 
-    @push('scripts')
-    <!-- Leaflet CSS ve JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+                // Popup oluştur
+                var popup = L.popup()
+                    .setLatLng(e.latlng)
+                    .setContent(content)
+                    .openOn(map);
 
-    <script>
-        // Harita başlatma
-        let map = L.map('map').setView([41.0082, 28.9784], 8);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                // Form submit olayını dinle
+                setTimeout(() => {
+                    document.getElementById('addFactoryForm').addEventListener('submit', async function(event) {
+                        event.preventDefault();
+                        
+                        const formData = new FormData();
+                        formData.append('name', this.name.value);
+                        formData.append('latitude', this.latitude.value);
+                        formData.append('longitude', this.longitude.value);
+                        formData.append('_token', '{{ csrf_token() }}');
 
-        let markers = [];
-        let selectedLocation = null;
+                        try {
+                            const response = await fetch('{{ route("factories.store") }}', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                },
+                                body: formData
+                            });
 
-        // Mevcut fabrikaları yükle
-        function loadFactories() {
-            fetch('/factories')
-                .then(response => response.json())
-                .then(factories => {
-                    // Tabloyu temizle
-                    document.getElementById('factoryList').innerHTML = '';
-                    // Markerları temizle
-                    markers.forEach(marker => map.removeLayer(marker));
-                    markers = [];
+                            const data = await response.json();
+                            console.log('Sunucu yanıtı:', data);
 
-                    factories.forEach(factory => {
-                        // Tabloya ekle
-                        let row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td class="px-6 py-4 border-b dark:border-gray-600">${factory.name}</td>
-                            <td class="px-6 py-4 border-b dark:border-gray-600">${factory.latitude}, ${factory.longitude}</td>
-                            <td class="px-6 py-4 border-b dark:border-gray-600">
-                                <button onclick="deleteFactory(${factory.id})" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Sil</button>
-                            </td>
-                        `;
-                        document.getElementById('factoryList').appendChild(row);
-
-                        // Haritaya marker ekle
-                        let marker = L.marker([factory.latitude, factory.longitude])
-                            .bindPopup(factory.name)
-                            .addTo(map);
-                        markers.push(marker);
+                            if (response.ok) {
+                                // Yeni marker ekle
+                                L.marker([lat, lng])
+                                    .bindPopup(this.name.value)
+                                    .addTo(map);
+                                
+                                // Popup'ı kapat
+                                map.closePopup();
+                                
+                                // Sayfayı yenile
+                                window.location.reload();
+                            } else {
+                                alert('Hata: ' + (data.message || 'Bilinmeyen bir hata oluştu'));
+                            }
+                        } catch (error) {
+                            console.error('Hata:', error);
+                            alert('Bir hata oluştu! Detaylar için konsolu kontrol edin.');
+                        }
                     });
-                });
-        }
+                }, 100);
+            });
 
-        // Sayfa yüklendiğinde fabrikaları yükle
-        loadFactories();
+            // Rota hesaplama butonu olayını dinle
+            document.getElementById('calculateRoute').addEventListener('click', async function() {
+                const sourceId = document.getElementById('source_factory_id').value;
+                const destinationId = document.getElementById('destination_factory_id').value;
+                const vehicleType = document.getElementById('vehicle_type').value;
 
-        // Form submit olayını dinle
-        document.getElementById('factoryForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            let name = document.getElementById('factoryName').value;
-            let lat = document.getElementById('lat').value;
-            let lng = document.getElementById('lng').value;
-
-            if (!name || !lat || !lng) {
-                alert('Lütfen fabrika adı girin ve haritadan konum seçin.');
-                return;
-            }
-
-            fetch('/factories', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: name,
-                    latitude: parseFloat(lat),
-                    longitude: parseFloat(lng)
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => Promise.reject(err));
+                if (!sourceId || !destinationId) {
+                    alert('Lütfen başlangıç ve hedef fabrikalarını seçin');
+                    return;
                 }
-                return response.json();
-            })
-            .then(data => {
-                document.getElementById('factoryModal').classList.add('hidden');
-                document.getElementById('factoryForm').reset();
-                loadFactories();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
+
+                if (sourceId === destinationId) {
+                    alert('Başlangıç ve hedef fabrikaları aynı olamaz');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('{{ route("calculations.calculate") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            source_factory_id: sourceId,
+                            destination_factory_id: destinationId,
+                            vehicle_type: vehicleType
+                        })
+                    });
+
+                    const data = await response.json();
+                    console.log('Sunucu yanıtı:', data);
+                    
+                    const resultsDiv = document.getElementById('results');
+                    const resultsContent = document.getElementById('resultsContent');
+                    
+                    if (data.success) {
+                        resultsContent.innerHTML = `
+                            <div class="bg-green-50 border border-green-200 rounded p-4">
+                                <p class="mb-2"><strong>${data.source_factory}</strong> ile <strong>${data.destination_factory}</strong> arası:</p>
+                                <p class="mb-1">Mesafe: ${data.distance} km</p>
+                                <p>Tahmini Süre: ${data.duration} saat (${data.vehicle_type === 'truck' ? 'Kamyon' : 'Kamyonet'} ile)</p>
+                            </div>
+                        `;
+                        resultsDiv.classList.remove('hidden');
+                    } else {
+                        resultsContent.innerHTML = `
+                            <div class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+                                ${data.message}
+                                ${data.errors ? '<ul class="mt-2 list-disc list-inside">' + 
+                                    Object.values(data.errors).map(err => `<li>${err}</li>`).join('') + 
+                                    '</ul>' : ''}
+                            </div>
+                        `;
+                        resultsDiv.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error('Hata:', error);
+                    alert('Rota hesaplanırken bir hata oluştu!');
+                }
             });
         });
-
-        // Haritaya tıklama olayı
-        map.on('click', function(e) {
-            selectedLocation = e.latlng;
-            
-            // Eski marker'ı temizle
-            markers.forEach(marker => map.removeLayer(marker));
-            markers = [];
-
-            // Yeni marker ekle
-            let marker = L.marker(e.latlng).addTo(map);
-            markers.push(marker);
-
-            // Modal'ı aç ve koordinatları kaydet
-            document.getElementById('factoryModal').classList.remove('hidden');
-            document.getElementById('lat').value = e.latlng.lat;
-            document.getElementById('lng').value = e.latlng.lng;
-            
-            // Input'a focus
-            document.getElementById('factoryName').focus();
-        });
-
-        // Modal kapatma
-        document.getElementById('closeModal').addEventListener('click', function() {
-            document.getElementById('factoryModal').classList.add('hidden');
-            document.getElementById('factoryForm').reset();
-        });
-
-        // Sayfa dışına tıklayınca modal'ı kapat
-        window.addEventListener('click', function(e) {
-            let modal = document.getElementById('factoryModal');
-            if (e.target === modal) {
-                modal.classList.add('hidden');
-                document.getElementById('factoryForm').reset();
-            }
-        });
-
-        // Fabrika silme fonksiyonu
-        function deleteFactory(id) {
-            if (confirm('Bu fabrikayı silmek istediğinizden emin misiniz?')) {
-                fetch(`/factories/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => Promise.reject(err));
-                    }
-                    loadFactories();
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Silme işlemi sırasında bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'));
-                });
-            }
-        }
     </script>
     @endpush
 </x-app-layout>

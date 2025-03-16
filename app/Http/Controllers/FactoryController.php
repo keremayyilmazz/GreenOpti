@@ -4,89 +4,208 @@ namespace App\Http\Controllers;
 
 use App\Models\Factory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class FactoryController extends Controller
 {
+    /**
+     * Display a listing of the resource.
+     */
     public function index()
     {
-        $factories = Factory::where('user_id', auth()->id())->get();
-        return response()->json($factories);
+        try {
+            $factories = Factory::all();
+            return view('factories.index', compact('factories'));
+        } catch (\Exception $e) {
+            Log::error('Fabrika listeleme hatası:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return back()->with('error', 'Fabrikalar listelenirken bir hata oluştu');
+        }
     }
 
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-        ]);
+        try {
+            Log::info('Gelen fabrika verisi:', $request->all());
 
-        $factory = Factory::create([
-            'name' => $validated['name'],
-            'latitude' => $validated['latitude'],
-            'longitude' => $validated['longitude'],
-            'user_id' => auth()->id()
-        ]);
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'latitude' => 'required|numeric|between:-90,90',
+                'longitude' => 'required|numeric|between:-180,180',
+            ]);
 
-        return response()->json($factory);
+            $factory = Factory::create($validated);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Fabrika başarıyla eklendi',
+                    'factory' => $factory
+                ]);
+            }
+
+            return redirect()
+                ->route('dashboard')
+                ->with('success', 'Fabrika başarıyla eklendi');
+
+        } catch (ValidationException $e) {
+            Log::warning('Fabrika ekleme validasyon hatası:', [
+                'errors' => $e->errors()
+            ]);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasyon hatası',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
+            return back()
+                ->withErrors($e->errors())
+                ->withInput();
+
+        } catch (\Exception $e) {
+            Log::error('Fabrika ekleme hatası:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Fabrika eklenirken bir hata oluştu'
+                ], 500);
+            }
+
+            return back()
+                ->with('error', 'Fabrika eklenirken bir hata oluştu')
+                ->withInput();
+        }
     }
 
+    /**
+     * Display the specified resource.
+     */
     public function show(Factory $factory)
     {
-        // Kullanıcının kendi fabrikasını görüntülemesini sağla
-        if ($factory->user_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        try {
+            return view('factories.show', compact('factory'));
+        } catch (\Exception $e) {
+            Log::error('Fabrika görüntüleme hatası:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return back()->with('error', 'Fabrika görüntülenirken bir hata oluştu');
         }
-        return response()->json($factory);
     }
 
+    /**
+     * Update the specified resource in storage.
+     */
     public function update(Request $request, Factory $factory)
     {
-        // Kullanıcının kendi fabrikasını güncellemesini sağla
-        if ($factory->user_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'latitude' => 'required|numeric|between:-90,90',
+                'longitude' => 'required|numeric|between:-180,180',
+            ]);
+
+            $factory->update($validated);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Fabrika başarıyla güncellendi',
+                    'factory' => $factory
+                ]);
+            }
+
+            return redirect()
+                ->route('dashboard')
+                ->with('success', 'Fabrika başarıyla güncellendi');
+
+        } catch (ValidationException $e) {
+            Log::warning('Fabrika güncelleme validasyon hatası:', [
+                'errors' => $e->errors()
+            ]);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validasyon hatası',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
+            return back()
+                ->withErrors($e->errors())
+                ->withInput();
+
+        } catch (\Exception $e) {
+            Log::error('Fabrika güncelleme hatası:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Fabrika güncellenirken bir hata oluştu'
+                ], 500);
+            }
+
+            return back()
+                ->with('error', 'Fabrika güncellenirken bir hata oluştu')
+                ->withInput();
         }
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-        ]);
-
-        $factory->update($validated);
-        return response()->json($factory);
     }
 
+    /**
+     * Remove the specified resource from storage.
+     */
     public function destroy(Factory $factory)
     {
-        // Kullanıcının kendi fabrikasını silmesini sağla
-        if ($factory->user_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        try {
+            $factory->delete();
+
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Fabrika başarıyla silindi'
+                ]);
+            }
+
+            return redirect()
+                ->route('dashboard')
+                ->with('success', 'Fabrika başarıyla silindi');
+
+        } catch (\Exception $e) {
+            Log::error('Fabrika silme hatası:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Fabrika silinirken bir hata oluştu'
+                ], 500);
+            }
+
+            return back()->with('error', 'Fabrika silinirken bir hata oluştu');
         }
-
-        $factory->delete();
-        return response()->json(['message' => 'Factory deleted successfully']);
-    }
-
-    public function mapData()
-    {
-        $factories = Factory::where('user_id', auth()->id())->get();
-        return response()->json($factories);
-    }
-
-    public function updateLocation(Request $request, Factory $factory)
-    {
-        // Kullanıcının kendi fabrikasının konumunu güncellemesini sağla
-        if ($factory->user_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        $validated = $request->validate([
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-        ]);
-
-        $factory->update($validated);
-        return response()->json($factory);
     }
 }
