@@ -59,6 +59,62 @@ class CalculationController extends Controller
         'aegean_ne' => ['lat' => 39.50, 'lon' => 26.30]           // Ege kuzeydoğu
     ];
 
+    private $railWaypoints = [
+        // İstanbul-Ankara Hattı (Yüksek Hızlı Tren)
+        'haydarpasa' => ['lat' => 40.997, 'lon' => 29.019],    // Haydarpaşa
+        'gebze' => ['lat' => 40.796, 'lon' => 29.431],         // Gebze
+        'izmit' => ['lat' => 40.766, 'lon' => 29.923],         // İzmit
+        'arifiye' => ['lat' => 40.702, 'lon' => 30.389],       // Arifiye
+        'bilecik' => ['lat' => 40.142, 'lon' => 30.024],       // Bilecik
+        'bozuyuk' => ['lat' => 39.907, 'lon' => 30.051],       // Bozüyük
+        'eskisehir' => ['lat' => 39.784, 'lon' => 30.520],     // Eskişehir
+        'polatli' => ['lat' => 39.588, 'lon' => 32.147],       // Polatlı
+        'sincan' => ['lat' => 39.974, 'lon' => 32.623],        // Sincan
+        'ankara' => ['lat' => 39.943, 'lon' => 32.861],        // Ankara
+
+        // Ankara-Sivas Hattı (Yüksek Hızlı Tren)
+        'kirikkale' => ['lat' => 39.846, 'lon' => 33.515],     // Kırıkkale
+        'yerkoy' => ['lat' => 39.635, 'lon' => 34.467],        // Yerköy
+        'yozgat' => ['lat' => 39.824, 'lon' => 34.815],        // Yozgat
+        'akdagmadeni' => ['lat' => 39.666, 'lon' => 35.885],   // Akdağmadeni
+        'sivas' => ['lat' => 39.747, 'lon' => 37.015],         // Sivas
+
+        // Ankara-Zonguldak Hattı
+        'kayas' => ['lat' => 39.969, 'lon' => 32.890],         // Kayaş
+        'kalecikkale' => ['lat' => 40.067, 'lon' => 33.407],   // Kalecik
+        'cerkes' => ['lat' => 40.817, 'lon' => 32.893],        // Çerkeş
+        'karabuk' => ['lat' => 41.200, 'lon' => 32.627],       // Karabük
+        'zonguldak' => ['lat' => 41.456, 'lon' => 31.798],     // Zonguldak
+
+        // Karabük-Sinop Hattı
+        'kastamonu' => ['lat' => 41.389, 'lon' => 33.783],     // Kastamonu
+        'boyabat' => ['lat' => 41.467, 'lon' => 34.767],       // Boyabat
+        'sinop' => ['lat' => 42.027, 'lon' => 35.151]          // Sinop
+    ];
+
+    private $railRoutes = [
+        'istanbul-ankara' => [
+            'haydarpasa', 'gebze', 'izmit', 'arifiye', 'bilecik', 
+            'bozuyuk', 'eskisehir', 'polatli', 'ankara'
+        ],
+        'ankara-karabuk' => [
+            'ankara', 'kayas', 'kirikkale', 'kalecikkale', 
+            'cerkes', 'karabuk'
+        ],
+        'karabuk-sinop' => [
+            'karabuk', 'kastamonu', 'boyabat', 'sinop'
+        ],
+        // Alternatif rotalar
+        'gebze-ankara' => [
+            'gebze', 'izmit', 'arifiye', 'bilecik', 
+            'bozuyuk', 'eskisehir', 'polatli', 'ankara'
+        ],
+        'ankara-sinop' => [
+            'ankara', 'kayas', 'kirikkale', 'kalecikkale', 
+            'cerkes', 'karabuk', 'kastamonu', 'boyabat', 'sinop'
+        ]
+    ];
+
     public function calculate(Request $request)
     {
         try {
@@ -151,6 +207,33 @@ class CalculationController extends Controller
                 ];
             }
 
+            // Tren taşımacılığı için özel rota
+            if ($vehicleType === 'rail') {
+                try {
+                    $geometry = $this->createRailRoute(
+                        $sourceFactory->latitude,
+                        $sourceFactory->longitude,
+                        $destinationFactory->latitude,
+                        $destinationFactory->longitude
+                    );
+
+                    $distance = $this->calculateTotalDistance($geometry['coordinates']);
+
+                    return [
+                        'success' => true,
+                        'distance' => $distance,
+                        'duration' => $this->calculateDuration($distance, $vehicleType),
+                        'geometry' => $geometry
+                    ];
+                } catch (\Exception $e) {
+                    Log::error('Tren rotası hesaplama hatası:', ['error' => $e->getMessage()]);
+                    return [
+                        'success' => false,
+                        'message' => 'Tren rotası hesaplanamadı: ' . $e->getMessage()
+                    ];
+                }
+            }
+
             // Hava yolu için kuşbakışı mesafe
             if ($vehicleType === 'air') {
                 $distance = $this->calculateHaversineDistance(
@@ -212,124 +295,326 @@ class CalculationController extends Controller
         };
     }
 
-    private function createSeaRoute($lat1, $lon1, $lat2, $lon2)
+    private function createRailRoute($lat1, $lon1, $lat2, $lon2)
     {
-        $coordinates = [];
-        $coordinates[] = [$lon1, $lat1]; // Başlangıç noktası
+        try {
+            Log::info('Tren rotası oluşturuluyor', [
+                'start' => ['lat' => $lat1, 'lon' => $lon1],
+                'end' => ['lat' => $lat2, 'lon' => $lon2]
+            ]);
 
-        // Başlangıç ve bitiş noktalarının hangi denizde olduğunu belirle
-        $startSea = $this->determineSeaRegion($lat1, $lon1);
-        $endSea = $this->determineSeaRegion($lat2, $lon2);
+            $coordinates = [];
+            $coordinates[] = [$lon1, $lat1]; // Başlangıç noktası
 
-        if ($startSea === $endSea) {
-            // Aynı denizdeyse direkt bağla
-            $coordinates[] = [$lon2, $lat2];
-        } else {
-            // Farklı denizlerdeyse uygun rotayı belirle
-            $route = $this->findSeaRoute($startSea, $endSea);
-            
-            foreach ($route as $point) {
-                $coordinates[] = [$this->seaWaypoints[$point]['lon'], $this->seaWaypoints[$point]['lat']];
+            // En yakın tren istasyonlarını bul
+            $startStation = $this->findNearestStation($lat1, $lon1);
+            $endStation = $this->findNearestStation($lat2, $lon2);
+
+            Log::info('En yakın istasyonlar bulundu', [
+                'startStation' => $startStation,
+                'endStation' => $endStation
+            ]);
+
+            // İstasyonlar arasındaki rotayı bul
+            $route = $this->findRailRoute($startStation, $endStation);
+
+            if (empty($route)) {
+                throw new \Exception("İstasyonlar arasında uygun rota bulunamadı");
             }
-            
+
+            // Rotadaki her istasyonu koordinatlara ekle
+            foreach ($route as $station) {
+                $coordinates[] = [
+                    $this->railWaypoints[$station]['lon'],
+                    $this->railWaypoints[$station]['lat']
+                ];
+            }
+
             $coordinates[] = [$lon2, $lat2]; // Bitiş noktası
+
+            Log::info('Tren rotası başarıyla oluşturuldu', [
+                'stationCount' => count($route),
+                'coordinateCount' => count($coordinates)
+            ]);
+
+            return [
+                'type' => 'LineString',
+                'coordinates' => $coordinates
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Tren rotası oluşturma hatası:', [
+                'error' => $e->getMessage(),
+                'start' => ['lat' => $lat1, 'lon' => $lon1],
+                'end' => ['lat' => $lat2, 'lon' => $lon2]
+            ]);
+            throw $e;
+        }
+    }
+
+    private function findNearestStation($lat, $lon)
+    {
+        $nearestStation = null;
+        $minDistance = PHP_FLOAT_MAX;
+
+        foreach ($this->railWaypoints as $station => $coords) {
+            $distance = $this->calculateHaversineDistance(
+                $lat,
+                $lon,
+                $coords['lat'],
+                $coords['lon']
+            );
+
+            if ($distance < $minDistance) {
+                $minDistance = $distance;
+                $nearestStation = $station;
+            }
         }
 
-        return [
-            'type' => 'LineString',
-            'coordinates' => $coordinates
-        ];
+        return $nearestStation;
+    }
+
+    private function findRailRoute($startStation, $endStation)
+    {
+        try {
+            Log::info('Rota hesaplanıyor:', ['start' => $startStation, 'end' => $endStation]);
+
+            // Önce direkt bağlantı var mı diye kontrol et
+            foreach ($this->railRoutes as $routeName => $route) {
+                $startIndex = array_search($startStation, $route);
+                $endIndex = array_search($endStation, $route);
+
+                if ($startIndex !== false && $endIndex !== false) {
+                    Log::info('Direkt rota bulundu', ['route' => $routeName]);
+                    // Her iki istasyon da aynı rotada bulundu
+                    if ($startIndex > $endIndex) {
+                        return array_reverse(array_slice($route, $endIndex, $startIndex - $endIndex + 1));
+                    } else {
+                        return array_slice($route, $startIndex, $endIndex - $startIndex + 1);
+                    }
+                }
+            }
+
+            Log::info('Direkt rota bulunamadı, aktarmalı rota aranıyor');
+
+            // Direkt bağlantı yoksa, Ankara veya Eskişehir üzerinden aktarma dene
+            $transferStations = ['ankara', 'eskisehir'];
+            
+            foreach ($transferStations as $transfer) {
+                // İlk parça: Başlangıç -> Transfer
+                $firstLeg = $this->findDirectRoute($startStation, $transfer);
+                
+                // İkinci parça: Transfer -> Hedef
+                $secondLeg = $this->findDirectRoute($transfer, $endStation);
+
+                if ($firstLeg && $secondLeg) {
+                    Log::info('Aktarmalı rota bulundu', ['transfer' => $transfer]);
+                    // Transfer noktasını tekrar eklememek için
+                    array_shift($secondLeg);
+                    return array_merge($firstLeg, $secondLeg);
+                }
+            }
+
+            // Hiçbir rota bulunamadıysa
+            Log::error('Rota bulunamadı', ['start' => $startStation, 'end' => $endStation]);
+            throw new \Exception('Uygun tren rotası bulunamadı');
+
+        } catch (\Exception $e) {
+            Log::error('Rota hesaplama hatası:', [
+                'error' => $e->getMessage(),
+                'start' => $startStation,
+                'end' => $endStation
+            ]);
+            throw $e;
+        }
+    }
+
+    private function findDirectRoute($start, $end)
+    {
+        try {
+            foreach ($this->railRoutes as $routeName => $route) {
+                $startIndex = array_search($start, $route);
+                $endIndex = array_search($end, $route);
+
+                if ($startIndex !== false && $endIndex !== false) {
+                    Log::info('Direkt bağlantı bulundu', [
+                        'route' => $routeName,
+                        'start' => $start,
+                        'end' => $end
+                    ]);
+
+                    if ($startIndex > $endIndex) {
+                        return array_reverse(array_slice($route, $endIndex, $startIndex - $endIndex + 1));
+                    } else {
+                        return array_slice($route, $startIndex, $endIndex - $startIndex + 1);
+                    }
+                }
+            }
+
+            Log::info('Direkt bağlantı bulunamadı', ['start' => $start, 'end' => $end]);
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Direkt rota arama hatası:', [
+                'error' => $e->getMessage(),
+                'start' => $start,
+                'end' => $end
+            ]);
+            return null;
+        }
+    }
+
+    private function createSeaRoute($lat1, $lon1, $lat2, $lon2)
+    {
+        try {
+            Log::info('Deniz rotası oluşturuluyor', [
+                'start' => ['lat' => $lat1, 'lon' => $lon1],
+                'end' => ['lat' => $lat2, 'lon' => $lon2]
+            ]);
+
+            $coordinates = [];
+            $coordinates[] = [$lon1, $lat1]; // Başlangıç noktası
+
+            // Başlangıç ve bitiş noktalarının hangi denizde olduğunu belirle
+            $startSea = $this->determineSeaRegion($lat1, $lon1);
+            $endSea = $this->determineSeaRegion($lat2, $lon2);
+
+            Log::info('Deniz bölgeleri belirlendi', [
+                'startSea' => $startSea,
+                'endSea' => $endSea
+            ]);
+
+            if (!$startSea || !$endSea) {
+                throw new \Exception('Başlangıç veya bitiş noktası deniz bölgesi dışında');
+            }
+
+            // Deniz rotası waypoint'lerini ekle
+            $routeWaypoints = $this->getSeaRouteWaypoints($startSea, $endSea);
+            
+            foreach ($routeWaypoints as $waypoint) {
+                $coordinates[] = [
+                    $this->seaWaypoints[$waypoint]['lon'],
+                    $this->seaWaypoints[$waypoint]['lat']
+                ];
+            }
+
+            $coordinates[] = [$lon2, $lat2]; // Bitiş noktası
+
+            Log::info('Deniz rotası başarıyla oluşturuldu', [
+                'waypointCount' => count($routeWaypoints),
+                'coordinateCount' => count($coordinates)
+            ]);
+
+            return [
+                'type' => 'LineString',
+                'coordinates' => $coordinates
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Deniz rotası oluşturma hatası:', [
+                'error' => $e->getMessage(),
+                'start' => ['lat' => $lat1, 'lon' => $lon1],
+                'end' => ['lat' => $lat2, 'lon' => $lon2]
+            ]);
+            throw $e;
+        }
     }
 
     private function determineSeaRegion($lat, $lon)
     {
-        // Karadeniz
-        if ($lat >= 41.0 && $lon >= 28.0) {
-            return 'blacksea';
-        }
-        // Marmara
-        if ($lat >= 40.0 && $lat <= 41.0 && $lon >= 26.0 && $lon <= 30.0) {
+        // Marmara Denizi sınırları
+        if ($lat >= 40.0 && $lat <= 41.0 && $lon >= 26.5 && $lon <= 30.0) {
             return 'marmara';
         }
-        // Ege
-        if ($lat >= 37.0 && $lat <= 40.0 && $lon <= 27.0) {
+        
+        // Karadeniz sınırları
+        if ($lat >= 41.0 && $lat <= 42.5 && $lon >= 28.0 && $lon <= 41.0) {
+            return 'blacksea';
+        }
+        
+        // Ege Denizi sınırları
+        if ($lat >= 36.5 && $lat <= 40.0 && $lon >= 25.5 && $lon <= 27.5) {
             return 'aegean';
         }
-        // Akdeniz
-        if ($lat <= 37.0) {
+        
+        // Akdeniz sınırları
+        if ($lat >= 35.5 && $lat <= 37.0 && $lon >= 27.5 && $lon <= 36.0) {
             return 'mediterranean';
         }
         
         return null;
     }
 
-    private function findSeaRoute($startSea, $endSea)
+    private function getSeaRouteWaypoints($startSea, $endSea)
     {
-        $routes = [
-            // Akdeniz'den Karadeniz'e
-            'mediterranean-blacksea' => [
-                'med_se', 'med_e1', 'med_e2', 'med_c1', 'med_c2', 'med_w1', 'med_w2', 'med_w3',
-                'aegean_se', 'aegean_s1', 'aegean_s2', 'aegean_c1', 'aegean_c2', 
-                'aegean_n1', 'aegean_n2', 'aegean_n3', 'aegean_ne',
-                'canakkale_entry', 'canakkale_mid1', 'canakkale_mid2', 'canakkale_exit',
-                'marmara_sw', 'marmara_south', 'marmara_se', 'marmara_ne',
-                'istanbul_entry', 'istanbul_mid', 'istanbul_exit',
-                'blacksea_nw', 'blacksea_w1', 'blacksea_w2', 'blacksea_w3',
-                'sinop_w', 'sinop_point'
-            ],
-            
-            // Akdeniz'den Ege'ye
-            'mediterranean-aegean' => [
-                'med_se', 'med_e1', 'med_e2', 'med_c1', 'med_c2',
-                'aegean_se', 'aegean_s1', 'aegean_s2', 'aegean_c1'
-            ],
-            
-            // Ege'den Karadeniz'e
-            'aegean-blacksea' => [
-                'aegean_n1', 'aegean_n2', 'aegean_n3', 'aegean_ne',
-                'canakkale_entry', 'canakkale_mid1', 'canakkale_mid2', 'canakkale_exit',
-                'marmara_sw', 'marmara_south', 'marmara_se', 'marmara_ne',
-                'istanbul_entry', 'istanbul_mid', 'istanbul_exit',
-                'blacksea_nw', 'blacksea_w1', 'blacksea_w2', 'blacksea_w3',
-                'sinop_w', 'sinop_point'
-            ],
-            
-            // Akdeniz'den Marmara'ya
-            'mediterranean-marmara' => [
-                'med_se', 'med_e1', 'med_e2', 'med_c1', 'med_c2',
-                'aegean_se', 'aegean_s1', 'aegean_s2', 'aegean_c1', 'aegean_c2',
-                'aegean_n1', 'aegean_n2', 'aegean_n3', 'aegean_ne',
-                'canakkale_entry', 'canakkale_mid1', 'canakkale_mid2', 'canakkale_exit',
-                'marmara_sw', 'marmara_south'
-            ],
-            
-            // Ege'den Marmara'ya
-            'aegean-marmara' => [
-                'aegean_n1', 'aegean_n2', 'aegean_n3', 'aegean_ne',
-                'canakkale_entry', 'canakkale_mid1', 'canakkale_mid2', 'canakkale_exit',
-                'marmara_sw', 'marmara_south'
-            ],
-            
-            // Marmara'dan Karadeniz'e
+        // Denizler arası geçiş rotaları
+        $seaRoutes = [
             'marmara-blacksea' => [
-                'marmara_ne', 'istanbul_entry', 'istanbul_mid', 'istanbul_exit',
-                'blacksea_nw', 'blacksea_w1', 'blacksea_w2', 'blacksea_w3',
-                'sinop_w', 'sinop_point'
+                'istanbul_entry', 'istanbul_mid', 'istanbul_exit',
+                'blacksea_nw', 'blacksea_w1', 'blacksea_w2'
+            ],
+            'marmara-aegean' => [
+                'canakkale_exit', 'canakkale_mid2', 'canakkale_mid1',
+                'canakkale_entry', 'aegean_ne', 'aegean_n3'
+            ],
+            'blacksea-marmara' => [
+                'blacksea_w2', 'blacksea_w1', 'blacksea_nw',
+                'istanbul_exit', 'istanbul_mid', 'istanbul_entry'
+            ],
+            'aegean-marmara' => [
+                'aegean_n3', 'aegean_ne', 'canakkale_entry',
+                'canakkale_mid1', 'canakkale_mid2', 'canakkale_exit'
             ]
         ];
 
         $routeKey = $startSea . '-' . $endSea;
-        if (isset($routes[$routeKey])) {
-            return $routes[$routeKey];
+
+        if (isset($seaRoutes[$routeKey])) {
+            return $seaRoutes[$routeKey];
         }
 
-        // Ters rota var mı diye kontrol et
-        $reverseKey = $endSea . '-' . $startSea;
-        if (isset($routes[$reverseKey])) {
-            return array_reverse($routes[$reverseKey]);
+        // Aynı deniz içindeki rotalar
+        if ($startSea === $endSea) {
+            switch ($startSea) {
+                case 'blacksea':
+                    return ['blacksea_w1', 'blacksea_w2', 'blacksea_w3'];
+                case 'marmara':
+                    return ['marmara_sw', 'marmara_south', 'marmara_se'];
+                case 'aegean':
+                    return ['aegean_n1', 'aegean_n2', 'aegean_n3'];
+                case 'mediterranean':
+                    return ['med_w1', 'med_w2', 'med_w3'];
+            }
         }
 
-        return [];
+        throw new \Exception('Bu deniz bölgeleri arasında rota bulunamadı');
+    }
+
+    private function isSeaTransportPossible($lat1, $lon1, $lat2, $lon2)
+    {
+        try {
+            $startSea = $this->determineSeaRegion($lat1, $lon1);
+            $endSea = $this->determineSeaRegion($lat2, $lon2);
+
+            // Her iki nokta da deniz kıyısında olmalı
+            if (!$startSea || !$endSea) {
+                return false;
+            }
+
+            // Aynı denizde veya bağlantılı denizlerde olmalı
+            $connectedSeas = [
+                'marmara' => ['blacksea', 'aegean'],
+                'blacksea' => ['marmara'],
+                'aegean' => ['marmara', 'mediterranean'],
+                'mediterranean' => ['aegean']
+            ];
+
+            return $startSea === $endSea || 
+                   (isset($connectedSeas[$startSea]) && in_array($endSea, $connectedSeas[$startSea]));
+
+        } catch (\Exception $e) {
+            Log::error('Deniz taşımacılığı kontrolü hatası:', ['error' => $e->getMessage()]);
+            return false;
+        }
     }
 
     private function calculateHaversineDistance($lat1, $lon1, $lat2, $lon2)
@@ -349,53 +634,6 @@ class CalculationController extends Controller
         $r = 6371;
 
         return $r * $c;
-    }
-
-    private function calculateTotalDistance($coordinates)
-    {
-        $total = 0;
-        for ($i = 0; $i < count($coordinates) - 1; $i++) {
-            $total += $this->calculateHaversineDistance(
-                $coordinates[$i][1],    // lat1
-                $coordinates[$i][0],    // lon1
-                $coordinates[$i+1][1],  // lat2
-                $coordinates[$i+1][0]   // lon2
-            );
-        }
-        return $total;
-    }
-
-    private function isCoastalLocation($latitude, $longitude)
-    {
-        // Türkiye'nin deniz kıyısı olan bölgelerinin yaklaşık koordinatları
-        $coastalAreas = [
-            // Karadeniz Kıyısı
-            ['min_lat' => 41.0, 'max_lat' => 42.1, 'min_lon' => 27.5, 'max_lon' => 41.5],
-            
-            // Marmara Kıyısı
-            ['min_lat' => 40.0, 'max_lat' => 41.0, 'min_lon' => 26.0, 'max_lon' => 30.0],
-            
-            // Ege Kıyısı
-            ['min_lat' => 37.0, 'max_lat' => 40.0, 'min_lon' => 26.0, 'max_lon' => 28.0],
-            
-            // Akdeniz Kıyısı
-            ['min_lat' => 36.0, 'max_lat' => 37.0, 'min_lon' => 27.5, 'max_lon' => 36.2]
-        ];
-
-        foreach ($coastalAreas as $area) {
-            if ($latitude >= $area['min_lat'] && $latitude <= $area['max_lat'] &&
-                $longitude >= $area['min_lon'] && $longitude <= $area['max_lon']) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function isSeaTransportPossible($lat1, $lon1, $lat2, $lon2)
-    {
-        return $this->isCoastalLocation($lat1, $lon1) && 
-               $this->isCoastalLocation($lat2, $lon2);
     }
 
     private function calculateDuration($distance, $vehicleType)
@@ -432,5 +670,19 @@ class CalculationController extends Controller
                 [$destinationFactory->longitude, $destinationFactory->latitude]
             ]
         ];
+    }
+
+    private function calculateTotalDistance($coordinates)
+    {
+        $distance = 0;
+        for ($i = 0; $i < count($coordinates) - 1; $i++) {
+            $distance += $this->calculateHaversineDistance(
+                $coordinates[$i][1],
+                $coordinates[$i][0],
+                $coordinates[$i + 1][1],
+                $coordinates[$i + 1][0]
+            );
+        }
+        return $distance;
     }
 }
