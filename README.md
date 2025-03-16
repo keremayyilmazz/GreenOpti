@@ -6,7 +6,7 @@ Bu proje, farklı ulaşım modları (kara, hava, deniz ve tren) arasında en opt
 ## 🚧 Geliştirme Aşaması
 Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler yakında eklenecektir:
 
-###✨ Planlanan Özellikler
+### Planlanan Özellikler
 - [ ] Çoklu Ulaşım Modu Analizi
   - Kara yolu optimizasyonu
   - Hava yolu optimizasyonu
