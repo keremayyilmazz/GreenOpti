@@ -31,6 +31,14 @@ Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler yak�
 - Detaylı karbon ayak izi analizi
 - İnteraktif harita entegrasyonu
 
+## Ekran Görüntüleri
+
+### Rota Hesaplama
+![Rota Hesaplama](screenshots/calculations.png)
+
+### Profil
+![Ana Sayfa](screenshots/account_settings.png)
+
 ## Kurulum
 
 ### Gereksinimler
