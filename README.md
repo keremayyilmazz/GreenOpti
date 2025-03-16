@@ -57,7 +57,6 @@ Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler zama
 <img src="screenshots/hava.jpg" alt="Hava Yolu Hesaplama" width="800"/>
 </details>
 
-
 <details>
 <summary><b>Profil Sayfası</b></summary>
 <br>
