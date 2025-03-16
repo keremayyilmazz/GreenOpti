@@ -4,15 +4,15 @@
 Bu proje, farklı ulaşım modları (kara, hava, deniz ve tren) arasında en optimum rotayı belirleyerek karbon emisyonunu azaltmayı, zaman ve maliyet optimizasyonunu sağlamayı amaçlayan bir web uygulamasıdır.
 
 ## 🚧 Geliştirme Aşaması
-Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler yakında eklenecektir:
+Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler zamanla eklenmeye devam edecektir:
+
+### Geliştirilmiş Özellikler
+  - Kara yolu optimizasyonu ✔️
+  - Hava yolu optimizasyonu ✔️
+  - Deniz yolu optimizasyonu ✔️
+  - Tren yolu optimizasyonu ✔️
 
 ### Planlanan Özellikler
-- [ ] Çoklu Ulaşım Modu Analizi
-  - Kara yolu optimizasyonu
-  - Hava yolu optimizasyonu
-  - Deniz yolu optimizasyonu
-  - Tren yolu optimizasyonu
-
 - [ ] Optimizasyon Kriterleri
   - Karbon emisyonu hesaplama
   - Zaman optimizasyonu
@@ -29,15 +29,34 @@ Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler yak�
 - Gerçek zamanlı rota takibi
 - Yapay zeka destekli rota optimizasyonu
 - Detaylı karbon ayak izi analizi
-- İnteraktif harita entegrasyonu
+
 
 ## Ekran Görüntüleri
 
 <details>
-<summary><b>Rota Hesaplama</b></summary>
+<summary><b>Kara Yolu Hesaplama</b></summary>
 <br>
-<img src="screenshots/calculations.jpg" alt="Rota Hesaplama" width="800"/>
+<img src="screenshots/kara.jpg" alt="Kara Yolu Hesaplama" width="800"/>
 </details>
+
+<details>
+<summary><b>Deniz Yolu Hesaplama</b></summary>
+<br>
+<img src="screenshots/deniz.jpg" alt="Deniz Yolu Hesaplama" width="800"/>
+</details>
+
+<details>
+<summary><b>Tren Yolu Hesaplama</b></summary>
+<br>
+<img src="screenshots/tren.jpg" alt="Tren Yolu Hesaplama" width="800"/>
+</details>
+
+<details>
+<summary><b>Hava Yolu Hesaplama</b></summary>
+<br>
+<img src="screenshots/hava.jpg" alt="Hava Yolu Hesaplama" width="800"/>
+</details>
+
 
 <details>
 <summary><b>Profil Sayfası</b></summary>
