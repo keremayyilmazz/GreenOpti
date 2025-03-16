@@ -6,7 +6,7 @@ Bu proje, farklı ulaşım modları (kara, hava, deniz ve tren) arasında en opt
 ## 🚧 Geliştirme Aşaması
 Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler yakında eklenecektir:
 
-### Planlanan Özellikler
+###✨ Planlanan Özellikler
 - [ ] Çoklu Ulaşım Modu Analizi
   - Kara yolu optimizasyonu
   - Hava yolu optimizasyonu
@@ -33,11 +33,17 @@ Proje şu anda aktif geliştirme aşamasındadır. Aşağıdaki özellikler yak�
 
 ## Ekran Görüntüleri
 
-### Rota Hesaplama
-![Rota Hesaplama](screenshots/calculations.png)
+<details>
+<summary><b>Rota Hesaplama</b></summary>
+<br>
+<img src="screenshots/calculations.jpg" alt="Rota Hesaplama" width="800"/>
+</details>
 
-### Profil
-![Ana Sayfa](screenshots/account_settings.png)
+<details>
+<summary><b>Profil Sayfası</b></summary>
+<br>
+<img src="screenshots/account_settings.jpg" alt="Profil Sayfası" width="800"/>
+</details>
 
 ## Kurulum
 
