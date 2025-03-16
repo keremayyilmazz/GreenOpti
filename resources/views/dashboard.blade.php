@@ -46,11 +46,13 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Araç Tipi
+                                Taşıma Tipi
                             </label>
                             <select id="vehicle_type" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="truck">Kamyon</option>
-                                <option value="van">Kamyonet</option>
+                                <option value="land">Kara Taşımacılığı</option>
+                                <option value="sea">Deniz Taşımacılığı</option>
+                                <option value="air">Hava Taşımacılığı</option>
+                                <option value="rail">Tren Taşımacılığı</option>
                             </select>
                         </div>
                     </div>
@@ -238,25 +240,42 @@
                     const resultsContent = document.getElementById('resultsContent');
                     
                     if (data.success) {
+                        const vehicleTypes = {
+                            'land': 'Kara Taşımacılığı',
+                            'sea': 'Deniz Taşımacılığı',
+                            'air': 'Hava Taşımacılığı',
+                            'rail': 'Tren Taşımacılığı'
+                        };
+
                         resultsContent.innerHTML = `
                             <div class="bg-green-50 border border-green-200 rounded p-4">
                                 <p class="mb-2"><strong>${data.source_factory}</strong> ile <strong>${data.destination_factory}</strong> arası:</p>
                                 <p class="mb-1">Mesafe: ${data.distance} km</p>
-                                <p>Tahmini Süre: ${data.duration} saat (${data.vehicle_type === 'truck' ? 'Kamyon' : 'Kamyonet'} ile)</p>
+                                <p>Tahmini Süre: ${data.duration} saat (${vehicleTypes[data.vehicle_type]} ile)</p>
                             </div>
                         `;
                         resultsDiv.classList.remove('hidden');
                     } else {
-                        resultsContent.innerHTML = `
-                            <div class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
-                                ${data.message}
-                                ${data.errors ? '<ul class="mt-2 list-disc list-inside">' + 
-                                    Object.values(data.errors).map(err => `<li>${err}</li>`).join('') + 
-                                    '</ul>' : ''}
-                            </div>
-                        `;
-                        resultsDiv.classList.remove('hidden');
-                    }
+                        let errorClass = 'bg-red-50 border-red-200';
+    let errorIcon = '';
+    
+    if (data.error_type === 'sea_transport_not_possible') {
+        errorClass = 'bg-yellow-50 border-yellow-200';
+        errorIcon = '<svg class="w-5 h-5 text-yellow-400 inline-block mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>';
+    }
+
+    resultsContent.innerHTML = `
+        <div class="${errorClass} border rounded p-4 text-gray-700">
+            ${errorIcon}${data.message}
+            ${data.errors ? '<ul class="mt-2 list-disc list-inside">' + 
+                Object.values(data.errors).map(err => `<li>${err}</li>`).join('') + 
+                '</ul>' : ''}
+        </div>
+    `;
+    resultsDiv.classList.remove('hidden');
+}
+
+                       
                 } catch (error) {
                     console.error('Hata:', error);
                     alert('Rota hesaplanırken bir hata oluştu!');

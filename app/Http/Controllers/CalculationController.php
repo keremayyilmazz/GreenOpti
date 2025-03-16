@@ -9,43 +9,40 @@ use Illuminate\Validation\ValidationException;
 
 class CalculationController extends Controller
 {
-    public function index()
-    {
-        try {
-            $factories = Factory::all();
-            Log::info('Listelenen fabrikalar:', $factories->toArray());
-            
-            return view('calculations.index', [
-                'factories' => $factories
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Fabrika listeleme hatası:', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            
-            return back()->with('error', 'Fabrikalar listelenirken bir hata oluştu');
-        }
-    }
-
+    /**
+     * Rota hesaplama işlemi
+     */
     public function calculate(Request $request)
     {
         try {
-            Log::info('Gelen hesaplama verisi:', $request->all());
-
-            // Validate the request
             $validated = $request->validate([
                 'source_factory_id' => 'required|exists:factories,id',
                 'destination_factory_id' => 'required|exists:factories,id|different:source_factory_id',
-                'vehicle_type' => 'required|in:truck,van'
+                'vehicle_type' => 'required|in:land,sea,air,rail'
             ]);
 
-            // Fabrikaları veritabanından çek
             $sourceFactory = Factory::findOrFail($validated['source_factory_id']);
             $destinationFactory = Factory::findOrFail($validated['destination_factory_id']);
 
-            // İki nokta arasındaki mesafeyi hesapla
+            // Deniz taşımacılığı kontrolü
+            if ($validated['vehicle_type'] === 'sea') {
+                $isSeaPossible = $this->isSeaTransportPossible(
+                    $sourceFactory->latitude,
+                    $sourceFactory->longitude,
+                    $destinationFactory->latitude,
+                    $destinationFactory->longitude
+                );
+
+                if (!$isSeaPossible) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Seçilen konumlar arasında deniz taşımacılığı mümkün değildir. Lütfen başka bir taşıma tipi seçin.',
+                        'error_type' => 'sea_transport_not_possible'
+                    ], 422);
+                }
+            }
+
+            // Mesafe hesaplama
             $distance = $this->calculateDistance(
                 $sourceFactory->latitude,
                 $sourceFactory->longitude,
@@ -53,32 +50,24 @@ class CalculationController extends Controller
                 $destinationFactory->longitude
             );
 
-            // Araç tipine göre hız belirle (km/saat)
-            $speed = $validated['vehicle_type'] === 'truck' ? 70 : 90;
-
-            // Süreyi hesapla (saat)
-            $duration = $distance / $speed;
+            // Taşıma tipine göre süre hesaplama
+            $duration = $this->calculateDuration($distance, $validated['vehicle_type']);
 
             return response()->json([
                 'success' => true,
-                'distance' => round($distance, 2),
-                'duration' => round($duration, 2),
                 'source_factory' => $sourceFactory->name,
                 'destination_factory' => $destinationFactory->name,
+                'distance' => round($distance, 2),
+                'duration' => round($duration, 2),
                 'vehicle_type' => $validated['vehicle_type']
             ]);
 
         } catch (ValidationException $e) {
-            Log::warning('Rota hesaplama validasyon hatası:', [
-                'errors' => $e->errors()
-            ]);
-
             return response()->json([
                 'success' => false,
                 'message' => 'Validasyon hatası',
                 'errors' => $e->errors()
             ], 422);
-
         } catch (\Exception $e) {
             Log::error('Rota hesaplama hatası:', [
                 'message' => $e->getMessage(),
@@ -88,28 +77,97 @@ class CalculationController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Hesaplama sırasında bir hata oluştu'
+                'message' => 'Rota hesaplanırken bir hata oluştu'
             ], 500);
         }
     }
 
     /**
-     * İki nokta arasındaki mesafeyi Haversine formülü ile hesaplar (km cinsinden)
+     * İki nokta arasındaki mesafeyi hesaplar (Haversine formülü)
      */
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
         $earthRadius = 6371; // Dünya'nın yarıçapı (km)
 
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLon = deg2rad($lon2 - $lon1);
+        $lat1 = deg2rad($lat1);
+        $lon1 = deg2rad($lon1);
+        $lat2 = deg2rad($lat2);
+        $lon2 = deg2rad($lon2);
 
-        $a = sin($dLat/2) * sin($dLat/2) +
-             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-             sin($dLon/2) * sin($dLon/2);
+        $latDelta = $lat2 - $lat1;
+        $lonDelta = $lon2 - $lon1;
 
-        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
-        $distance = $earthRadius * $c;
+        $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
+            cos($lat1) * cos($lat2) * pow(sin($lonDelta / 2), 2)));
 
-        return $distance;
+        return $angle * $earthRadius;
+    }
+
+    /**
+     * Mesafe ve taşıma tipine göre süreyi hesaplar
+     */
+    private function calculateDuration($distance, $vehicleType)
+    {
+        // Ortalama hızlar (km/saat)
+        $speeds = [
+            'land' => 70,    // Kara taşımacılığı için ortalama hız
+            'sea' => 30,     // Deniz taşımacılığı için ortalama hız
+            'air' => 800,    // Hava taşımacılığı için ortalama hız
+            'rail' => 120    // Tren taşımacılığı için ortalama hız
+        ];
+
+        // Ek süreler (saat) - yükleme, boşaltma, gümrük vb.
+        $additionalTimes = [
+            'land' => 2,     // Kara taşımacılığı için ek süre
+            'sea' => 24,     // Deniz taşımacılığı için ek süre (liman işlemleri)
+            'air' => 4,      // Hava taşımacılığı için ek süre (havalimanı işlemleri)
+            'rail' => 3      // Tren taşımacılığı için ek süre (istasyon işlemleri)
+        ];
+
+        // Mesafe / Hız = Hareket Süresi
+        $travelTime = $distance / $speeds[$vehicleType];
+
+        // Toplam süre = Hareket Süresi + Ek Süreler
+        return $travelTime + $additionalTimes[$vehicleType];
+    }
+
+    /**
+     * Bir konumun deniz kıyısında olup olmadığını kontrol eder
+     */
+    private function isCoastalLocation($latitude, $longitude)
+    {
+        // Türkiye'nin deniz kıyısı olan bölgelerinin yaklaşık koordinatları
+        $coastalAreas = [
+            // Karadeniz Kıyısı
+            ['min_lat' => 41.0, 'max_lat' => 42.1, 'min_lon' => 27.5, 'max_lon' => 41.5],
+            
+            // Marmara Kıyısı
+            ['min_lat' => 40.0, 'max_lat' => 41.0, 'min_lon' => 26.0, 'max_lon' => 30.0],
+            
+            // Ege Kıyısı
+            ['min_lat' => 37.0, 'max_lat' => 40.0, 'min_lon' => 26.0, 'max_lon' => 28.0],
+            
+            // Akdeniz Kıyısı
+            ['min_lat' => 36.0, 'max_lat' => 37.0, 'min_lon' => 27.5, 'max_lon' => 36.2]
+        ];
+
+        foreach ($coastalAreas as $area) {
+            if ($latitude >= $area['min_lat'] && $latitude <= $area['max_lat'] &&
+                $longitude >= $area['min_lon'] && $longitude <= $area['max_lon']) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * İki nokta arasında deniz taşımacılığının mümkün olup olmadığını kontrol eder
+     */
+    private function isSeaTransportPossible($lat1, $lon1, $lat2, $lon2)
+    {
+        // Her iki nokta da kıyıda olmalı
+        return $this->isCoastalLocation($lat1, $lon1) && 
+               $this->isCoastalLocation($lat2, $lon2);
     }
 }
