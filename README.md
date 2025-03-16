@@ -192,10 +192,14 @@ GET /api/analysis/time            - Zaman optimizasyon raporu
 ### Not
 API endpoint'leri geliştirme aşamasındadır ve değişiklik gösterebilir. Güncel dokümantasyon için lütfen düzenli olarak kontrol ediniz.
 
-## Teknik Altyapı
-- Laravel 10.x
-- PHP 8.1+
-- MySQL
-- JavaScript
-- Harita API'leri (Yakında eklenecek)
-- AI Modelleri (Geliştirme aşamasında)
+## 🛠️ Teknolojiler
+
+- ![Laravel](https://img.shields.io/badge/Laravel-FF2D20?style=flat&logo=laravel&logoColor=white) Laravel 10
+- ![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=flat&logo=vue.js&logoColor=white) Vue.js 3
+- ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white) Tailwind CSS
+- ![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=flat&logo=leaflet&logoColor=white) Leaflet Maps
+
+
+## 👥 Katkıda Bulunanlar
+
+- [Kerem Ayyılmaz](https://github.com/keremayyilmazz) - Geliştirici
