@@ -112,19 +112,18 @@
                         const response = await fetch(`/factories/${id}`, {
                             method: 'DELETE',
                             headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json'
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
                             }
                         });
 
                         const data = await response.json();
                         
                         if (response.ok) {
-                            // Başarılı silme işlemi
                             alert('Fabrika başarıyla silindi');
-                            window.location.reload(); // Sayfayı yenile
+                            window.location.reload();
                         } else {
-                            // Hata durumu
                             alert('Hata: ' + (data.message || 'Fabrika silinirken bir hata oluştu'));
                         }
                     } catch (error) {
@@ -169,13 +168,12 @@
                         formData.append('name', this.name.value);
                         formData.append('latitude', this.latitude.value);
                         formData.append('longitude', this.longitude.value);
-                        formData.append('_token', '{{ csrf_token() }}');
 
                         try {
                             const response = await fetch('{{ route("factories.store") }}', {
                                 method: 'POST',
                                 headers: {
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                                     'Accept': 'application/json'
                                 },
                                 body: formData
@@ -185,15 +183,11 @@
                             console.log('Sunucu yanıtı:', data);
 
                             if (response.ok) {
-                                // Yeni marker ekle
                                 L.marker([lat, lng])
                                     .bindPopup(this.name.value)
                                     .addTo(map);
                                 
-                                // Popup'ı kapat
                                 map.closePopup();
-                                
-                                // Sayfayı yenile
                                 window.location.reload();
                             } else {
                                 alert('Hata: ' + (data.message || 'Bilinmeyen bir hata oluştu'));
@@ -227,7 +221,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                             'Accept': 'application/json'
                         },
                         body: JSON.stringify({
