@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-
+Route::get('/route-details/{source}/{destination}/{type}', [CalculationController::class, 'getRouteDetails'])
+    ->name('route.details');
 Route::get('/', function () {
     return view('welcome');
 });

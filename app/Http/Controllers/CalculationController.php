@@ -5,13 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 
 class CalculationController extends Controller
 {
-    /**
-     * Rota hesaplama işlemi
-     */
     public function calculate(Request $request)
     {
         try {
@@ -42,24 +40,24 @@ class CalculationController extends Controller
                 }
             }
 
-            // Mesafe hesaplama
-            $distance = $this->calculateDistance(
-                $sourceFactory->latitude,
-                $sourceFactory->longitude,
-                $destinationFactory->latitude,
-                $destinationFactory->longitude
-            );
+            // Rota detaylarını al
+            $routeDetails = $this->getRouteDetails($sourceFactory, $destinationFactory, $validated['vehicle_type']);
 
-            // Taşıma tipine göre süre hesaplama
-            $duration = $this->calculateDuration($distance, $validated['vehicle_type']);
+            if (!$routeDetails['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $routeDetails['message']
+                ], 422);
+            }
 
             return response()->json([
                 'success' => true,
                 'source_factory' => $sourceFactory->name,
                 'destination_factory' => $destinationFactory->name,
-                'distance' => round($distance, 2),
-                'duration' => round($duration, 2),
-                'vehicle_type' => $validated['vehicle_type']
+                'distance' => round($routeDetails['distance'], 2),
+                'duration' => round($routeDetails['duration'], 2),
+                'vehicle_type' => $validated['vehicle_type'],
+                'geometry' => $routeDetails['geometry'] ?? null
             ]);
 
         } catch (ValidationException $e) {
@@ -82,10 +80,71 @@ class CalculationController extends Controller
         }
     }
 
-    /**
-     * İki nokta arasındaki mesafeyi hesaplar (Haversine formülü)
-     */
-    private function calculateDistance($lat1, $lon1, $lat2, $lon2)
+    public function getRouteDetails($sourceFactory, $destinationFactory, $vehicleType)
+    {
+        try {
+            // Hava yolu için kuşbakışı mesafe
+            if ($vehicleType === 'air') {
+                $distance = $this->calculateHaversineDistance(
+                    $sourceFactory->latitude,
+                    $sourceFactory->longitude,
+                    $destinationFactory->latitude,
+                    $destinationFactory->longitude
+                );
+
+                return [
+                    'success' => true,
+                    'distance' => $distance,
+                    'duration' => $distance / 800, // 800 km/saat ortalama hız
+                    'geometry' => $this->createAirRouteGeometry($sourceFactory, $destinationFactory)
+                ];
+            }
+
+            // OSRM API endpoint
+            $baseUrl = "https://router.project-osrm.org/route/v1";
+            $profile = $this->getVehicleProfile($vehicleType);
+
+            $url = "{$baseUrl}/{$profile}/{$sourceFactory->longitude},{$sourceFactory->latitude};{$destinationFactory->longitude},{$destinationFactory->latitude}";
+            $url .= "?overview=full&geometries=geojson&steps=true";
+
+            $response = Http::get($url);
+            $data = $response->json();
+
+            if ($response->successful() && isset($data['routes'][0])) {
+                return [
+                    'success' => true,
+                    'distance' => $data['routes'][0]['distance'] / 1000,
+                    'duration' => $this->calculateDuration($data['routes'][0]['distance'] / 1000, $vehicleType),
+                    'geometry' => $data['routes'][0]['geometry']
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Rota bulunamadı'
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Rota detayları alınamadı', ['error' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'message' => 'Rota hesaplanırken bir hata oluştu'
+            ];
+        }
+    }
+
+    private function getVehicleProfile($vehicleType)
+    {
+        return match($vehicleType) {
+            'land' => 'driving',    // Karayolu için
+            'rail' => 'driving',    // Şimdilik driving, daha sonra tren yolları için özelleştireceğiz
+            'sea' => 'driving',     // Deniz rotası için özel çözüm gerekecek
+            'air' => 'driving',     // Hava yolu için kuşbakışı hesaplama yapacağız
+            default => 'driving'
+        };
+    }
+
+    private function calculateHaversineDistance($lat1, $lon1, $lat2, $lon2)
     {
         $earthRadius = 6371; // Dünya'nın yarıçapı (km)
 
@@ -103,37 +162,18 @@ class CalculationController extends Controller
         return $angle * $earthRadius;
     }
 
-    /**
-     * Mesafe ve taşıma tipine göre süreyi hesaplar
-     */
-    private function calculateDuration($distance, $vehicleType)
+    private function createAirRouteGeometry($sourceFactory, $destinationFactory)
     {
-        // Ortalama hızlar (km/saat)
-        $speeds = [
-            'land' => 70,    // Kara taşımacılığı için ortalama hız
-            'sea' => 30,     // Deniz taşımacılığı için ortalama hız
-            'air' => 800,    // Hava taşımacılığı için ortalama hız
-            'rail' => 120    // Tren taşımacılığı için ortalama hız
+        // GeoJSON LineString formatında hava yolu rotası oluştur
+        return [
+            'type' => 'LineString',
+            'coordinates' => [
+                [$sourceFactory->longitude, $sourceFactory->latitude],
+                [$destinationFactory->longitude, $destinationFactory->latitude]
+            ]
         ];
-
-        // Ek süreler (saat) - yükleme, boşaltma, gümrük vb.
-        $additionalTimes = [
-            'land' => 2,     // Kara taşımacılığı için ek süre
-            'sea' => 24,     // Deniz taşımacılığı için ek süre (liman işlemleri)
-            'air' => 4,      // Hava taşımacılığı için ek süre (havalimanı işlemleri)
-            'rail' => 3      // Tren taşımacılığı için ek süre (istasyon işlemleri)
-        ];
-
-        // Mesafe / Hız = Hareket Süresi
-        $travelTime = $distance / $speeds[$vehicleType];
-
-        // Toplam süre = Hareket Süresi + Ek Süreler
-        return $travelTime + $additionalTimes[$vehicleType];
     }
 
-    /**
-     * Bir konumun deniz kıyısında olup olmadığını kontrol eder
-     */
     private function isCoastalLocation($latitude, $longitude)
     {
         // Türkiye'nin deniz kıyısı olan bölgelerinin yaklaşık koordinatları
@@ -161,13 +201,34 @@ class CalculationController extends Controller
         return false;
     }
 
-    /**
-     * İki nokta arasında deniz taşımacılığının mümkün olup olmadığını kontrol eder
-     */
     private function isSeaTransportPossible($lat1, $lon1, $lat2, $lon2)
     {
-        // Her iki nokta da kıyıda olmalı
         return $this->isCoastalLocation($lat1, $lon1) && 
                $this->isCoastalLocation($lat2, $lon2);
+    }
+
+    private function calculateDuration($distance, $vehicleType)
+    {
+        // Ortalama hızlar (km/saat)
+        $speeds = [
+            'land' => 70,    // Kara taşımacılığı için ortalama hız
+            'sea' => 30,     // Deniz taşımacılığı için ortalama hız
+            'air' => 800,    // Hava taşımacılığı için ortalama hız
+            'rail' => 120    // Tren taşımacılığı için ortalama hız
+        ];
+
+        // Ek süreler (saat) - yükleme, boşaltma, gümrük vb.
+        $additionalTimes = [
+            'land' => 2,     // Kara taşımacılığı için ek süre
+            'sea' => 24,     // Deniz taşımacılığı için ek süre (liman işlemleri)
+            'air' => 4,      // Hava taşımacılığı için ek süre (havalimanı işlemleri)
+            'rail' => 3      // Tren taşımacılığı için ek süre (istasyon işlemleri)
+        ];
+
+        // Mesafe / Hız = Hareket Süresi
+        $travelTime = $distance / $speeds[$vehicleType];
+
+        // Toplam süre = Hareket Süresi + Ek Süreler
+        return $travelTime + $additionalTimes[$vehicleType];
     }
 }
