@@ -1,229 +1,256 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Nakliye Hesaplama') }}
-        </h2>
-    </x-slot>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Rota Hesaplama</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: 10px;
+        }
+        .calculation-form {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .result-box {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .navbar {
+            margin-bottom: 20px;
+        }
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .route-info {
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Lojistik Yönetim Sistemi</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('profile.edit') }}">Profil</a>
+                    </li>
+                    <li class="nav-item">
+                        <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                            @csrf
+                            <button type="submit" class="nav-link btn btn-link">Çıkış Yap</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    <form id="calculationForm" class="space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div>
-                                <label for="source_factory_id" class="block text-sm font-medium text-gray-700">Çıkış Fabrikası</label>
-                                <select id="source_factory_id" name="source_factory_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                    <option value="">Fabrika Seçin</option>
-                                    @foreach($factories as $factory)
-                                        <option value="{{ $factory->id }}">{{ $factory->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                @include('calculation-form')
 
-                            <div>
-                                <label for="destination_factory_id" class="block text-sm font-medium text-gray-700">Varış Fabrikası</label>
-                                <select id="destination_factory_id" name="destination_factory_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                    <option value="">Fabrika Seçin</option>
-                                    @foreach($factories as $factory)
-                                        <option value="{{ $factory->id }}">{{ $factory->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+                <div id="map"></div>
 
-                            <div>
-                                <label for="weight" class="block text-sm font-medium text-gray-700">Taşınacak Miktar (ton)</label>
-                                <input type="number" step="0.01" min="0.01" id="weight" name="weight" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            </div>
-                        </div>
-
-                        <div class="flex justify-end">
-                            <button type="submit" class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                                Hesapla
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Sonuç Alanı -->
-                    <div id="result" class="mt-8 hidden">
-                        <div class="rounded-md bg-green-50 p-4">
-                            <div class="flex">
-                                <div class="flex-shrink-0">
-                                    <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                </div>
-                                <div class="ml-3">
-                                    <h3 class="text-sm font-medium text-green-800" id="resultText"></h3>
-                                    <div class="mt-2 text-sm text-green-700">
-                                        <p id="distanceText"></p>
-                                        <p id="weightText"></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Geçmiş Hesaplamalar -->
-                    <div class="mt-8">
-                        <h3 class="text-lg font-medium text-gray-900">Geçmiş Hesaplamalar</h3>
-                        <div class="mt-4 flex flex-col">
-                            <div class="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                                <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-                                    <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-                                        <table class="min-w-full divide-y divide-gray-300">
-                                            <thead class="bg-gray-50">
-                                                <tr>
-                                                    <th scope="col" class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Çıkış Fabrikası</th>
-                                                    <th scope="col" class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Varış Fabrikası</th>
-                                                    <th scope="col" class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Miktar</th>
-                                                    <th scope="col" class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Mesafe</th>
-                                                    <th scope="col" class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Tutar</th>
-                                                    <th scope="col" class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Tarih</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="calculationHistory" class="divide-y divide-gray-200 bg-white">
-                                                <!-- JavaScript ile doldurulacak -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="result-box">
+                    <h4><i class="fas fa-info-circle"></i> Rota Bilgileri</h4>
+                    <div class="route-info">
+                        <p><strong>Mesafe:</strong> <span id="distance">-</span></p>
+                        <p><strong>Tahmini Süre:</strong> <span id="duration">-</span></p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- CSRF Token Meta -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // CSRF Token'ı al
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        // Fabrika verilerini JavaScript'e aktar
+        var factories = @json($factories);
 
-        // Form gönderimi
-        document.getElementById('calculationForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        // Harita başlatma
+        var map = L.map('map').setView([39.9334, 32.8597], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Marker ikonlarını tanımla
+        var startIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        var endIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        var factoryIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        // Tüm markerları tutacak bir obje
+        var markers = {};
+
+        // Fabrikaları haritaya ekle
+        factories.forEach(function(factory) {
+            markers[factory.id] = L.marker([factory.latitude, factory.longitude], {
+                icon: factoryIcon
+            }).addTo(map).bindPopup(factory.name);
+        });
+
+        // Form submit olayını dinle
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('routeForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                calculateRoute();
+            });
+        });
+
+        function getRouteColor(vehicleType) {
+            switch(vehicleType) {
+                case 'land': return '#FF5722';  // Turuncu
+                case 'sea': return '#2196F3';   // Mavi
+                case 'air': return '#9C27B0';   // Mor
+                case 'rail': return '#4CAF50';  // Yeşil
+                default: return '#000000';      // Siyah
+            }
+        }
+
+        function calculateRoute() {
+            console.clear(); // Önceki logları temizle
+            console.log('Hesaplama başladı...');
             
-            const sourceFactoryId = document.getElementById('source_factory_id').value;
-            const destFactoryId = document.getElementById('destination_factory_id').value;
-            const weight = document.getElementById('weight').value;
+            // Tüm markerları mavi yap
+            Object.values(markers).forEach(marker => {
+                marker.setIcon(factoryIcon);
+            });
+            console.log('Tüm markerlar maviye çevrildi');
 
-            // Form validasyonu
-            if (!sourceFactoryId || !destFactoryId || !weight) {
-                alert('Lütfen tüm alanları doldurun.');
+            var sourceFactory = factories.find(f => f.id === parseInt(document.getElementById('source_factory_id').value));
+            var destinationFactory = factories.find(f => f.id === parseInt(document.getElementById('destination_factory_id').value));
+            var vehicleType = document.getElementById('vehicle_type').value;
+            
+            console.log('Seçilen fabrikalar:', {
+                kaynak: sourceFactory?.name,
+                hedef: destinationFactory?.name,
+                tasimaTipi: vehicleType
+            });
+
+            if (!sourceFactory || !destinationFactory) {
+                alert('Lütfen başlangıç ve hedef fabrikalarını seçin');
                 return;
             }
 
-            // Aynı fabrika kontrolü
-            if (sourceFactoryId === destFactoryId) {
-                alert('Çıkış ve varış fabrikaları aynı olamaz!');
-                return;
+            // Seçilen fabrikaların markerlarını güncelle
+            try {
+                markers[sourceFactory.id].setIcon(startIcon);
+                console.log('Başlangıç noktası yeşile çevrildi:', sourceFactory.name);
+                
+                markers[destinationFactory.id].setIcon(endIcon);
+                console.log('Hedef noktası kırmızıya çevrildi:', destinationFactory.name);
+
+                // Popup içeriklerini güncelle
+                markers[sourceFactory.id].setPopupContent('<b>Başlangıç:</b> ' + sourceFactory.name);
+                markers[destinationFactory.id].setPopupContent('<b>Hedef:</b> ' + destinationFactory.name);
+            } catch (error) {
+                console.error('Marker güncellenirken hata:', error);
             }
 
-            const formData = {
-                source_factory_id: sourceFactoryId,
-                destination_factory_id: destFactoryId,
-                weight: parseFloat(weight)
-            };
-
-            // API isteği
-            fetch('/calculations', {
+            // AJAX çağrısı
+            fetch('/calculate-route', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json'
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({
+                    source_factory_id: sourceFactory.id,
+                    destination_factory_id: destinationFactory.id,
+                    vehicle_type: vehicleType
+                })
             })
             .then(response => {
                 if (!response.ok) {
-                    return response.json().then(data => {
-                        throw new Error(data.message || 'Sunucu hatası oluştu');
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Bir hata oluştu');
                     });
                 }
                 return response.json();
             })
             .then(data => {
-                if (data.error) {
-                    throw new Error(data.message || 'İşlem başarısız');
-                }
+                if (data.success) {
+                    if (data.geometry) {
+                        if (window.routeLayer) {
+                            map.removeLayer(window.routeLayer);
+                        }
+                        window.routeLayer = L.geoJSON(data.geometry, {
+                            style: function(feature) {
+                                return {
+                                    color: getRouteColor(vehicleType),
+                                    weight: 3,
+                                    opacity: 0.8
+                                };
+                            }
+                        }).addTo(map);
 
-                // Sonuçları göster
-                const resultDiv = document.getElementById('result');
-                const resultText = document.getElementById('resultText');
-                const distanceText = document.getElementById('distanceText');
-                const weightText = document.getElementById('weightText');
-                
-                resultDiv.classList.remove('hidden');
-                resultText.textContent = `Toplam Nakliye Bedeli: ${Number(data.amount).toLocaleString('tr-TR')} TL`;
-                distanceText.textContent = `Toplam Mesafe: ${Number(data.distance).toLocaleString('tr-TR')} km`;
-                weightText.textContent = `Taşınacak Miktar: ${Number(formData.weight).toLocaleString('tr-TR')} ton`;
-                
-                // Geçmiş hesaplamaları güncelle
-                loadCalculationHistory();
-                
-                // Formu temizle
-                this.reset();
+                        map.fitBounds(window.routeLayer.getBounds(), {
+                            padding: [50, 50]
+                        });
+                    }
+
+                    document.getElementById('distance').textContent = data.distance.toFixed(2) + ' km';
+                    document.getElementById('duration').textContent = data.duration.toFixed(2) + ' saat';
+                } else {
+                    alert(data.message || 'Rota hesaplanırken bir hata oluştu');
+                }
             })
             .catch(error => {
-                console.error('Hesaplama hatası:', error);
-                alert('Hesaplama yapılırken bir hata oluştu: ' + error.message);
+                console.error('Hata:', error);
+                alert(error.message || 'Rota hesaplanırken bir hata oluştu');
             });
-        });
-
-        // Geçmiş hesaplamaları yükle
-        function loadCalculationHistory() {
-            fetch('/calculations/list')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Geçmiş hesaplamalar yüklenemedi');
-                    }
-                    return response.json();
-                })
-                .then(calculations => {
-                    const tbody = document.getElementById('calculationHistory');
-                    tbody.innerHTML = '';
-                    
-                    calculations.forEach(calc => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap">${calc.source_factory_name}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${calc.destination_factory_name}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${Number(calc.weight).toLocaleString('tr-TR')} ton</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${Number(calc.distance).toLocaleString('tr-TR')} km</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${Number(calc.amount).toLocaleString('tr-TR')} TL</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${new Date(calc.created_at).toLocaleString('tr-TR')}</td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                })
-                .catch(error => {
-                    console.error('Geçmiş yükleme hatası:', error);
-                    alert('Geçmiş hesaplamalar yüklenirken bir hata oluştu');
-                });
-        }
-
-        // Sayfa yüklendiğinde
-        document.addEventListener('DOMContentLoaded', function() {
-            loadCalculationHistory();
-        });
-
-        // Fabrika seçimi değiştiğinde kontrol
-        document.getElementById('source_factory_id').addEventListener('change', checkFactories);
-        document.getElementById('destination_factory_id').addEventListener('change', checkFactories);
-
-        function checkFactories() {
-            const sourceId = document.getElementById('source_factory_id').value;
-            const destId = document.getElementById('destination_factory_id').value;
-            
-            if (sourceId && destId && sourceId === destId) {
-                alert('Çıkış ve varış fabrikaları aynı olamaz!');
-                document.getElementById('destination_factory_id').value = '';
-            }
         }
     </script>
-</x-app-layout>
+</body>
+</html>
