@@ -5,6 +5,7 @@ use App\Http\Controllers\CalculationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FactoryController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\RouteController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
 Route::get('/route-details/{source}/{destination}/{type}', [CalculationController::class, 'getRouteDetails'])
     ->name('route.details');
 Route::get('/', function () {
@@ -33,7 +35,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Hesaplama işlemleri
     Route::get('/calculations', [CalculationController::class, 'index'])->name('calculations.index');
     Route::post('/calculations', [CalculationController::class, 'calculate'])->name('calculations.calculate');
-    
+    Route::post('/calculate-route', [RouteController::class, 'calculate'])
+    ->name('calculate.route')
+    ->middleware('auth');
     // Profil işlemleri
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
